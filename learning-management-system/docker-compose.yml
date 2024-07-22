@@ -1,0 +1,14 @@
+version: '4'
+services:
+  database:
+    image: postgres:16-alpine
+    ports:
+      - "5433:5432"
+    environment:
+      - POSTGRES_DB=${PG_DB}
+      - POSTGRES_USER=${PG_UNAME}
+      - POSTGRES_PASSWORD=${PG_PASSW}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+volumes:
+  postgres-data:
