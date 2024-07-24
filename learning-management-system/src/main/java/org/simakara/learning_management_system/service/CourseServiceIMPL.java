@@ -34,6 +34,10 @@ public class CourseServiceIMPL implements CourseService{
 
         validatorHandler.validate(request);
 
+        if (courseRepo.existsByName(request.name())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Choose another name.");
+        }
+
         log.info("Validation done, creating course...");
 
         Course createdCourse = Course
