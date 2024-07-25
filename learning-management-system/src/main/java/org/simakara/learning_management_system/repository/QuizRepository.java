@@ -11,9 +11,9 @@ import java.util.Optional;
 @Repository
 public interface QuizRepository extends JpaRepository<Quiz, Long> {
 
+    boolean existsByName(String name);
+
     Optional<Quiz> findByCode(String code);
 
     List<Quiz> findByNameContainingIgnoreCase(String name, Pageable pageable);
-
-
 }

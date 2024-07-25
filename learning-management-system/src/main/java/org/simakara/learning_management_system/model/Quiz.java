@@ -51,6 +51,8 @@ public class Quiz extends CreatedAndUpdatedAt {
     @Column(nullable = false)
     private QuizType type;
 
+    private LocalDateTime accessibleAt;
+
     private LocalDateTime expiredAt;
 
     @PrePersist

@@ -1,6 +1,7 @@
 package org.simakara.learning_management_system.dto.request;
 
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import org.simakara.learning_management_system.model.enums.QuizType;
 
 import java.time.LocalDateTime;
@@ -11,8 +12,11 @@ public record CreateQuizRequest(
 
         String description,
 
-        @NotBlank(message = "Quiz type is required.")
+        @NotNull
         QuizType type,
+
+        @NotNull
+        LocalDateTime accessible,
 
         LocalDateTime expiration
 ) {
