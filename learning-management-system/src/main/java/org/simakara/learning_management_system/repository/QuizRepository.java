@@ -1,5 +1,6 @@
 package org.simakara.learning_management_system.repository;
 
+import org.simakara.learning_management_system.model.Course;
 import org.simakara.learning_management_system.model.Quiz;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -16,4 +17,6 @@ public interface QuizRepository extends JpaRepository<Quiz, Long> {
     Optional<Quiz> findByCode(String code);
 
     List<Quiz> findByNameContainingIgnoreCase(String name, Pageable pageable);
+
+    List<Quiz> findByCourses(Course course, Pageable pageable);
 }

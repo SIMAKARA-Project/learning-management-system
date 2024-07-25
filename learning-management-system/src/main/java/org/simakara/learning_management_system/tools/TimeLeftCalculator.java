@@ -2,8 +2,6 @@ package org.simakara.learning_management_system.tools;
 
 import java.time.LocalDateTime;
 
-import static java.time.temporal.ChronoUnit.DAYS;
-import static java.time.temporal.ChronoUnit.HOURS;
 import static java.time.temporal.ChronoUnit.MINUTES;
 
 public class TimeLeftCalculator {

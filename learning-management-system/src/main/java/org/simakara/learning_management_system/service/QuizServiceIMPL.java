@@ -3,16 +3,20 @@ package org.simakara.learning_management_system.service;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.simakara.learning_management_system.dto.request.CreateQuizRequest;
+import org.simakara.learning_management_system.dto.request.UpdateQuizCourseRequest;
 import org.simakara.learning_management_system.dto.request.UpdateQuizRequest;
 import org.simakara.learning_management_system.dto.response.QuizResponse;
 import org.simakara.learning_management_system.handler.ValidatorHandler;
 import org.simakara.learning_management_system.mapper.QuizResponseMapper;
+import org.simakara.learning_management_system.model.Course;
 import org.simakara.learning_management_system.model.Quiz;
 import org.simakara.learning_management_system.model.enums.QuizType;
+import org.simakara.learning_management_system.repository.CourseRepository;
 import org.simakara.learning_management_system.repository.QuizRepository;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDateTime;
@@ -27,6 +31,8 @@ import static org.simakara.learning_management_system.mapper.QuizResponseMapper.
 public class QuizServiceIMPL implements QuizService {
 
     private final QuizRepository quizRepo;
+
+    private final CourseRepository courseRepo;
 
     private final ValidatorHandler validatorHandler;
 
@@ -46,7 +52,7 @@ public class QuizServiceIMPL implements QuizService {
 
         if (
                 QuizType.TRYOUT.equals(request.type())
-                        && Objects.isNull(request.expiration())
+                && Objects.isNull(request.expiration())
         ) {
             throw new ResponseStatusException(
                     HttpStatus.BAD_REQUEST,
@@ -63,12 +69,29 @@ public class QuizServiceIMPL implements QuizService {
 
         log.info("Validated. Creating quiz...");
 
+        List<Course> courses = request
+                .courseCodes()
+                .stream()
+                .distinct()
+                .map(
+                        code -> courseRepo
+                                .findByCode(code)
+                                .orElseThrow(
+                                        () -> new ResponseStatusException(
+                                                HttpStatus.NOT_FOUND,
+                                                "Course with code " + code + " not found."
+                                        )
+                                )
+                )
+                .toList();
+
         Quiz quiz = Quiz.builder()
                 .name(request.name())
                 .description(request.description())
                 .type(request.type())
                 .accessibleAt(request.accessible())
                 .expiredAt(request.expiration())
+                .courses(courses)
                 .build();
 
         log.info("Quiz Created");
@@ -86,7 +109,7 @@ public class QuizServiceIMPL implements QuizService {
                 .orElseThrow(
                         () -> new ResponseStatusException(
                                 HttpStatus.NOT_FOUND,
-                                "Course doesn't exist."
+                                "Quiz doesn't exist."
                         )
                 );
 
@@ -117,13 +140,38 @@ public class QuizServiceIMPL implements QuizService {
     }
 
     @Override
+    public List<QuizResponse> getQuizzesFromCourse(String code, int page, int content) {
+
+        Course course = courseRepo
+                .findByCode(code)
+                .orElseThrow(
+                        () -> new ResponseStatusException(
+                                HttpStatus.NOT_FOUND,
+                                "Course doesn't exist.")
+                );
+
+        return quizRepo
+                .findByCourses(
+                        course,
+                        PageRequest.of(page, content)
+                )
+                .stream()
+                .map(QuizResponseMapper::toQuizResponse)
+                .toList();
+    }
+
+    @Override
+    @Transactional
     public QuizResponse updateQuiz(UpdateQuizRequest request, String code) {
 
         validatorHandler.validate(request);
 
         Quiz quiz = quizRepo.findByCode(code)
                 .orElseThrow(
-                        () -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Quiz doesn't exist.")
+                        () -> new ResponseStatusException(
+                                HttpStatus.NOT_FOUND,
+                                "Quiz doesn't exist."
+                        )
                 );
 
         String name = request.name();
@@ -160,8 +208,82 @@ public class QuizServiceIMPL implements QuizService {
     }
 
     @Override
-    public void deleteQuiz(String code) {
+    @Transactional
+    public QuizResponse updateQuizCourse(UpdateQuizCourseRequest request, String code) {
+
+        validatorHandler.validate(request);
+
         Quiz quiz = quizRepo.findByCode(code)
+                .orElseThrow(
+                        () -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Quiz doesn't exist")
+                );
+
+        if (request.courseCode().isEmpty()) {
+            return toQuizResponse(quiz);
+        }
+
+        List<Course> courses = request.courseCode()
+                .stream()
+                .distinct()
+                .map(
+                        courseCode -> courseRepo
+                                .findByCode(courseCode)
+                                .orElseThrow(
+                                        () -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Course doesn't exist")
+                                )
+                )
+                .filter(
+                        course -> !quiz.getCourses().contains(course)
+                )
+                .toList();
+
+        quiz.getCourses().addAll(courses);
+
+        quizRepo.save(quiz);
+
+        return toQuizResponse(quiz);
+    }
+
+    @Override
+    @Transactional
+    public QuizResponse deleteQuizCourse(String courseCode, String quizCode) {
+
+        Quiz quiz = quizRepo.findByCode(quizCode)
+                .orElseThrow(
+                        () -> new ResponseStatusException(
+                                HttpStatus.NOT_FOUND,
+                                "Quiz doesn't exist"
+                        )
+                );
+
+        Course course = courseRepo.findByCode(courseCode)
+                .orElseThrow(
+                        () -> new ResponseStatusException(
+                                HttpStatus.NOT_FOUND,
+                                "Course doesn't exist"
+                        )
+                );
+
+        if (!quiz.getCourses().contains(course)) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "Course " + courseCode + " is not included in " + quizCode
+            );
+        }
+
+        quiz.getCourses().remove(course);
+
+        quizRepo.save(quiz);
+
+        return toQuizResponse(quiz);
+    }
+
+    @Override
+    @Transactional
+    public void deleteQuiz(String code) {
+
+        Quiz quiz = quizRepo
+                .findByCode(code)
                 .orElseThrow(
                         () -> new ResponseStatusException(
                                 HttpStatus.NOT_FOUND,
