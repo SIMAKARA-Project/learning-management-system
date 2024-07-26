@@ -9,12 +9,15 @@ import org.simakara.learning_management_system.handler.ValidatorHandler;
 import org.simakara.learning_management_system.mapper.CourseResponseMapper;
 import org.simakara.learning_management_system.model.Course;
 import org.simakara.learning_management_system.repository.CourseRepository;
+import org.simakara.learning_management_system.repository.QuizRepository;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 import static org.simakara.learning_management_system.mapper.CourseResponseMapper.toCourseResponse;
 
@@ -24,6 +27,8 @@ import static org.simakara.learning_management_system.mapper.CourseResponseMappe
 public class CourseServiceIMPL implements CourseService{
 
     private final CourseRepository courseRepo;
+
+    private final QuizRepository quizRepo;
 
     private final ValidatorHandler validatorHandler;
 
@@ -122,6 +127,7 @@ public class CourseServiceIMPL implements CourseService{
     }
 
     @Override
+    @Transactional
     public void deleteCourse(String code) {
         Course course = courseRepo
                 .findByCode(code)
@@ -130,6 +136,15 @@ public class CourseServiceIMPL implements CourseService{
                 );
 
         log.info("Deleting course {}...", code);
+
+        course.getQuizzes()
+                .stream()
+                .map(quiz -> {
+                    quiz.getCourses().remove(course);
+                    quizRepo.save(quiz);
+                    return null;
+                })
+                .toList();
 
         courseRepo.delete(course);
     }
