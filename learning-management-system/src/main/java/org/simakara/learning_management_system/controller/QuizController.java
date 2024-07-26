@@ -99,11 +99,11 @@ public class QuizController {
     }
 
     @GetMapping(
-            path = "/course/{code}",
+            path = "/course/{courseCode}",
             produces = MediaType.APPLICATION_JSON_VALUE
     )
     public ResponseEntity<WebResponse<List<QuizResponse>>> getQuizzesFromCourse(
-            @PathVariable(value = "code") String code,
+            @PathVariable(value = "courseCode") String code,
             @RequestParam(value = "pg") int page,
             @RequestParam(value = "ctn") int content
     ) {
